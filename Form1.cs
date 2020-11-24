@@ -1,4 +1,5 @@
-﻿using LemmaSharp;
+﻿using informacijos_paieska.Classes;
+using LemmaSharp.Classes;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -10,7 +11,6 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.Windows.Forms;
-using XLemmatizer;
 
 namespace informacijos_paieska
 {
@@ -20,109 +20,83 @@ namespace informacijos_paieska
         {
             InitializeComponent();
         }
-        // static ILemmatizer lmtz = new LemmatizerPrebuiltCompact(LanguagePrebuilt.English);
-
-        public class Turinys
-        {
-            public int failoIndeksas { get; set; }
-            public string failoTurinys { get; set; }
-            public string[] zodis { get; set; }
-            public int[] zodziaiCount { get; set; }
-
-            public Turinys()
-            {
-
-            }
-            public void darbasSuTuriniu()
-            {
-                string[] turinioZodziai = failoTurinys.Split(' ', '\n', ' ', '.', ',', '-', '?', '|', '✓', '!', '/', ':', '\'', '\"', '(', ')', ';');
-                turinioZodziai = turinioZodziai.Where(x => !string.IsNullOrWhiteSpace(x))
-                                 .ToArray();
-                //MessageBox.Show("Yra " + turinioZodziai.Length.ToString() + " Žodžių faile");
-                //Surenkami visi unikalūs žodžiai
-                for (int i = 0; i < turinioZodziai.Length; i++)
-                {
-                    turinioZodziai[i] = turinioZodziai[i].Trim().ToLower();
-                }
-                this.zodis = turinioZodziai.Distinct().ToArray();
-                zodziaiCount = new int[zodis.Length];
-                //MessageBox.Show("Yra " + zodis.Length.ToString() + " uniklaių faile");
-                //suskaičiuojama kiek kiekvienas žodis pasikartoja faile
-
-                zodis = zodis.Except(new List<string> { string.Empty }).ToArray();
-
-                for (int i = 0; i < zodis.Length; i++)
-                {
-                    for (int j = 0; j < turinioZodziai.Length; j++)
-                    {
-                        if (zodis[i] == turinioZodziai[j])
-                        {
-                            zodziaiCount[i]++;
-                        }
-                    }
-                }
-            }
-            Lemmatizer lemmatizer = new Lemmatizer();
-            public void listWords(RichTextBox ats)
-            {
-                
-                darbasSuTuriniu();
-                for (int i = 0; i < zodis.Length; i++)
-                {
-                    ats.Text += zodis[i] + " ; " + zodziaiCount[i] + " ; " + lemmatizer.(zodis[i]) + Environment.NewLine;
-                }
-
-            }
-        }
 
         public string[] turinys = new string[30];
         public string[] failu_indeksai = new string[30];
-
         List<Turinys> failai = new List<Turinys>();
 
+        List<indeksuotiFailai> indexFiles = new List<indeksuotiFailai>();
+        List<lemmFailai> lemmFiles = new List<lemmFailai>();
         private void Form1_Load(object sender, EventArgs e)
         {
+
+            //Failų apdorojimas | suindeksavimas visais 3 būdais.
             string[] filePaths = Directory.GetFiles(@"D:\failai\");
+            string[] indeksuotiFailai = Directory.GetFiles(@"D:\failai\indeksuotiFailai\");
+            string[] lemuotiFailai = Directory.GetFiles(@"D:\failai\lemuotiFailai\");
+            string[] bigramFailai = Directory.GetFiles(@"D:\failai\bigramFailai\");
+
             int fileIndex = 0;
             foreach (string filesNames in filePaths)
             {
                 failu_indeksai[fileIndex] = filesNames;
                 turinys[fileIndex] = File.ReadAllText(filesNames);
                 failai.Add(new Turinys() { failoIndeksas = fileIndex, failoTurinys = turinys[fileIndex] });
-                failai.ElementAt(fileIndex).listWords(richTextBox1);
+                failai.ElementAt(fileIndex).darbasSuTuriniu();
                 fileIndex++;
             }
+            fileIndex = 0;
             infoBottomLabel.Text = "Failai Nustaikyti";
+            indexButton_Click(sender, e);
+            lemButton_Click(sender, e);
+            bigramButton_Click(sender, e);
+            moveFilesAfterConvertion();
+            // Failų apdorojimo pabaiga
+
+            //Indeksuotų failų paėmimas
+            foreach (string filesNames in indeksuotiFailai)
+            {
+                indexFiles.Add(new indeksuotiFailai()
+                {
+                    fileIndex = fileIndex,
+                    fileName = filesNames
+                });
+                indexFiles.ElementAt(fileIndex).readIndexFile();
+                fileIndex++;
+            }
+            //Darbo pabaiga su indeksuotais failais 
+            fileIndex = 0;
+            //Lemmuotų failų paėmimas
+            foreach (string filesNames in lemuotiFailai)
+            {
+                lemmFiles.Add(new lemmFailai()
+                {
+                    fileIndex = fileIndex,
+                    fileName = filesNames
+                });
+                lemmFiles.ElementAt(fileIndex).readIndexFile();
+                fileIndex++;
+            }
+            //Darbo pabaiga su Lemuotais failais 
         }
 
         private void button1_Click(object sender, EventArgs e)
         {
+            indexlistView.Items.Clear();
+            string paieskosZodziai = textBox1.Text.Trim();
+            indexlistView.View = View.Details;
             richTextBox1.Clear();
-            string paieskosZodziai = textBox1.Text;
-            string[] ieskotiZodziu = Regex.Split(paieskosZodziai, " ");
-            for (int i = 0; i < ieskotiZodziu.Length; i++)
+            foreach (var file in indexFiles)
             {
-                ieskotiZodziu[i] = ieskotiZodziu[i].Trim();
+                if (file.isInFile(paieskosZodziai,richTextBox1))
+                {
+                    indexlistView.Items.Add(new ListViewItem(new[] { file.fileIndex.ToString(), file.fileName.ToString() }));
+                }
+                
             }
+            indexlistView.GridLines = true;
             // Paieska(ieskotiZodziu);
         }
-
-        public void Paieska(string[] searchWords)
-        {
-            for (int i = 0; i < turinys.Length; i++)
-            {
-                if (turinys[i] != null)
-                {
-                    richTextBox1.Text += Environment.NewLine + failu_indeksai[i] + Environment.NewLine + Environment.NewLine;
-                    foreach (string word in searchWords)
-                    {
-                        if (turinys[i].Contains(word))
-                            richTextBox1.Text += word + "[" + Regex.Matches(turinys[i], word).Count + "]" + " ";
-                    }
-                }
-            }
-        }
-
 
         private void button2_Click(object sender, EventArgs e)
         {
@@ -130,5 +104,112 @@ namespace informacijos_paieska
             richTextBox1.Clear();
         }
 
+        private void lemButton_Click(object sender, EventArgs e)
+        {
+            var dataFilepath = @"D:\failai\LemFile\full7z-multext-en.lem";
+            var lemuotiFailai = @"D:\failai\lemuotiFailai\";
+
+            var stream = File.OpenRead(dataFilepath);
+            var lemmatizer = new Lemmatizer(stream);
+            string failoVardas = "";
+
+            for (int i = 0; i < failai.Count; i++)
+            {
+
+                failoVardas = failu_indeksai[failai.ElementAt(i).failoIndeksas].ToString();
+                string[] workingFileName = failoVardas.Split('\\');
+                failoVardas = lemuotiFailai + workingFileName[workingFileName.Length - 1];
+                using (StreamWriter file = new StreamWriter(failoVardas)){
+
+                    failoVardas = "";
+                    for(int j=0;j<failai.ElementAt(i).zodis.Length;j++)
+                    {
+                        file.WriteLine(lemmatizer.Lemmatize(failai.ElementAt(i).zodis[j]) +';'+ failai.ElementAt(i).zodziaiCount[j]);
+                    }
+                }
+
+            }
+            infoBottomLabel.Text = "Failai sėkmingai Lemuoti";
+        }
+        private void indexButton_Click(object sender, EventArgs e)
+        {
+            var indeksuotiFailai = @"D:\failai\indeksuotiFailai\";
+            string failoVardas = "";
+
+            for (int i = 0; i < failai.Count; i++)
+            {
+
+                failoVardas = failu_indeksai[failai.ElementAt(i).failoIndeksas].ToString();
+                string[] workingFileName = failoVardas.Split('\\');
+                failoVardas = indeksuotiFailai + workingFileName[workingFileName.Length - 1];
+                using (StreamWriter file = new StreamWriter(failoVardas))
+                {
+                    failoVardas = "";
+                    for (int j = 0; j < failai.ElementAt(i).zodis.Length; j++)
+                    {
+                        file.WriteLine(failai.ElementAt(i).zodis[j] + ';' + failai.ElementAt(i).zodziaiCount[j]);
+                    }
+                }
+
+            }
+            infoBottomLabel.Text = "Failai sėkmingai Suindeksuoti";
+        }
+
+        private void bigramButton_Click(object sender, EventArgs e)
+        {
+            var bigramosFailai = @"D:\failai\bigramFailai\";
+            string failoVardas = "";
+
+            for (int i = 0; i < failai.Count; i++)
+            {
+
+                failoVardas = failu_indeksai[failai.ElementAt(i).failoIndeksas].ToString();
+                string[] workingFileName = failoVardas.Split('\\');
+                failoVardas = bigramosFailai + workingFileName[workingFileName.Length - 1];
+
+                using (StreamWriter file = new StreamWriter(failoVardas))
+                {
+                    failoVardas = "";
+                    for (int j = 0; j < failai.ElementAt(i).zodis.Length-1; j++)
+                    {
+                        file.WriteLine(failai.ElementAt(i).zodis[j] + ' ' + failai.ElementAt(i).zodis[j+1]);
+                    }
+                }
+
+            }
+            infoBottomLabel.Text = "Failai sėkmingai Bigramuoti";
+        }
+
+        private void moveFilesAfterConvertion()
+        {
+            var originalPath = "";
+            var apdorotiFailai = @"D:\failai\apdorotiFailai\";
+            string failoVardas = "";
+            for (int i = 0; i < failai.Count; i++)
+            {
+                originalPath = failu_indeksai[failai.ElementAt(i).failoIndeksas].ToString();
+                string[] workingFileName = originalPath.Split('\\');
+                failoVardas = apdorotiFailai + workingFileName[workingFileName.Length - 1];
+                File.Move(originalPath, failoVardas);
+            }
+            infoBottomLabel.Text = "Visi Failai Apdoroti";
+        }
+
+        private void button3_Click(object sender, EventArgs e)
+        {
+            lemmListView.Items.Clear();
+            string paieskosZodziai = textBox1.Text.Trim();
+            lemmListView.View = View.Details;
+            richTextBox1.Clear();
+            foreach (var file in lemmFiles)
+            {
+                if (file.isInFile(paieskosZodziai, richTextBox1))
+                {
+                    lemmListView.Items.Add(new ListViewItem(new[] { file.fileIndex.ToString(), file.fileName.ToString() }));
+                }
+
+            }
+            lemmListView.GridLines = true;
+        }
     }
 }
