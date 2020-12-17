@@ -103,6 +103,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Classes\biggram.cs" />
     <Compile Include="Classes\indeksuotiFailai.cs" />
     <Compile Include="Classes\lemmFailai.cs" />
     <Compile Include="Classes\Turinys.cs" />

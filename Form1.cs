@@ -27,6 +27,7 @@ namespace informacijos_paieska
 
         List<indeksuotiFailai> indexFiles = new List<indeksuotiFailai>();
         List<lemmFailai> lemmFiles = new List<lemmFailai>();
+        List<biggram> bigramFiles = new List<biggram>();
         private void Form1_Load(object sender, EventArgs e)
         {
 
@@ -78,6 +79,19 @@ namespace informacijos_paieska
                 fileIndex++;
             }
             //Darbo pabaiga su Lemuotais failais 
+            fileIndex = 0;
+            //Biguotu failų paėmimas
+            foreach (string filesNames in bigramFailai)
+            {
+                bigramFiles.Add(new biggram()
+                {
+                    fileIndex = fileIndex,
+                    fileName = filesNames
+                });
+                bigramFiles.ElementAt(fileIndex).readBigramFile();
+                fileIndex++;
+            }
+            //Darbo pabaiga su Biguotais failais 
         }
 
         private void button1_Click(object sender, EventArgs e)
@@ -210,6 +224,28 @@ namespace informacijos_paieska
 
             }
             lemmListView.GridLines = true;
+        }
+
+        private void button4_Click(object sender, EventArgs e)
+        {
+            biggramListView.Items.Clear();
+            string paieskosZodziai = textBox1.Text.Trim();
+            biggramListView.View = View.Details;
+            richTextBox1.Clear();
+            foreach (var file in bigramFiles)
+            {
+                if (file.isInFile(paieskosZodziai, richTextBox1))
+                {
+                    biggramListView.Items.Add(new ListViewItem(new[] { file.fileIndex.ToString(), file.fileName.ToString() }));
+                }
+
+            }
+            biggramListView.GridLines = true;
+        }
+
+        private void label4_Click(object sender, EventArgs e)
+        {
+          
         }
     }
 }
